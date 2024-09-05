@@ -1,0 +1,24 @@
+.page-desc-holder {
+    padding: 0;
+    margin: 0 auto 35px auto;
+    text-shadow: 0 1px 1px #000000;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 24px;
+    text-align: center;
+}
+
+.cooldown-ico {
+    height: 87px;
+    width: 87px;
+    border: none;
+    background: url(../images/not_active.png) no-repeat;
+}
+
+.cooldown-ico:hover {
+    background: url(../images/active.png) no-repeat;
+}
+
+.description-small {
+    text-align: center;
+}
