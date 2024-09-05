@@ -4,7 +4,10 @@
             if (typeof Unstuck != "undefined") {
                 Unstuck.User.initialize({
                     vp: {$vp},
-                    price: {$service_cost},
+                    vp_price : {$service_cost_vp},
+                    dp: {$dp},
+                    dp_price: {$service_cost_dp},
+                    gold : {$service_gold}
                 });
             } else {
                 setTimeout(initializeUnstuck, 50);
@@ -45,7 +48,9 @@
                             {if $realm.characters}
                                 <option value="0">{lang('no_char_selected', 'unstuck')}</option>
                                 {foreach from=$realm.characters item=character}
+                                  {if $character.online == 0}
                                     <option value="{$character.guid}">{$character.name} - Lvl {$character.level}</option>
+                                  {/if}
                                 {/foreach}
                             {else}
                                 <option value="0">{lang('no_character', 'unstuck')}</option>
@@ -54,15 +59,17 @@
                     {/foreach}
                 </div>
             </div>
-
             <div class="clear"></div>
-
             <div class="description-small">
                 {lang('notify', 'unstuck')}<br>
-                {if $service_cost}
-                    <div id="cost">{lang('service_fee', 'unstuck')}: {$service_cost} VP</div>
-                {else}
-                    {lang('is_free', 'unstuck')}
+                {if !$service_cost_vp &&  !$service_gold && !$service_cost_dp }
+                     {lang('is_free', 'unstuck')}
+                {elseif $service_cost_vp}
+                    <div id="cost">{lang('service_fee', 'unstuck')}  <img src="http://localhost/application/images/icons/lightning.png" align="absmiddle">  VP {$service_cost_vp} </div>
+                {elseif $service_cost_dp}
+                    <div id="cost">{lang('service_fee', 'unstuck')}  <img src="http://localhost/application/images/icons/coins.png" align="absmiddle">   DP  {$service_cost_dp}  </div>
+                {elseif $service_gold}
+                    <div id="cost">{lang('service_fee', 'unstuck')}  <img src="{$url}application/modules/playtime/img/money-gold.gif" align="absmiddle" height="15" width="15" /> {$service_gold} </div>
                 {/if}
             </div>
         </div>

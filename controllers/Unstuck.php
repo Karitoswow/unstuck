@@ -56,9 +56,7 @@ class Unstuck extends MX_Controller
     public function index()
     {
         $this->init();
-
         $this->template->setTitle(lang('unstuck', 'unstuck'));
-
         clientLang("cant_afford", "unstuck");
         clientLang("no_realm_selected", "unstuck");
         clientLang("no_char_selected", "unstuck");
@@ -70,7 +68,10 @@ class Unstuck extends MX_Controller
             "url" => $this->template->page_url,
             "total" => $this->total,
             "vp" => $this->user->getVp(),
-            "service_cost" => $this->config->item("price_vote_point")
+            "dp" => $this->user->getDp(),
+            "service_cost_vp" => $this->config->item("price_vote_point"),
+            "service_cost_dp" => $this->config->item("price_donate_point"),
+            "service_gold" => $this->config->item("gold")
         );
 
         $page_content = $this->template->loadPage("unstuck.tpl", $content_data);
@@ -93,8 +94,15 @@ class Unstuck extends MX_Controller
         $realmId = $this->input->post('realm');
 
         // Make sure the realm actually supports console commands
-        if (!$this->realms->getRealm($realmId)->getEmulator()->hasConsole()) {
-            die(lang("not_support", "unstuck"));
+        if (!$this->realms->getRealm($realmId)->getEmulator()->hasConsole())
+        {
+
+            $data = [
+                'status' => false,
+                'icon' => 'error',
+                'text' => lang("not_support", "unstuck")
+            ];
+            die(json_encode($data));
         }
 
         if ($characterGuid && $realmId) {
@@ -136,45 +144,123 @@ class Unstuck extends MX_Controller
             $isOnline = $realmConnection->isOnline($characterGuid);
 
             if ($isOnline) {
+
                 $data = [
                     'status' => false,
                     'icon' => 'error',
                     'text' => lang("character_is_online", "unstuck")
                 ];
                 die(json_encode($data));
+
             }
 
             //Get the price
-            $price = $this->config->item("price_vote_point");
+            $price_vote = $this->config->item("price_vote_point");
 
-            //Check if the user can afford the service
-            if ($this->user->getVp() >= $price) {
-                //Execute the command
-                $this->realms->getRealm($realmId)->getEmulator()->sendCommand('.revive ' . $characterName);
+            $price_donate = $this->config->item("price_donate_point");
 
+            $gold = $this->config->item("gold");
+
+            if (!$price_vote &&  !$gold && !$price_donate)
+            {
                 $this->home($realmId, $characterGuid);
-                $this->unstuck_model->setLocation($this->gps['posX'], $this->gps['posY'], $this->gps['posZ'], $this->gps['orientation'], $this->gps['mapId'], $characterGuid, $realmConnection->getConnection());
+                $this->done($realmId, $characterName , $characterGuid);
 
-                // Update Donation Points
-                if ($price > 0) {
-                    $this->user->setVp($this->user->getVp() - $price);
-                }
-
-                //Successful
                 $data = [
                     'status' => true,
                     'icon' => 'success',
                     'text' => lang("successfully", "unstuck")
                 ];
 
-            } else {
-                $data = [
-                    'status' => false,
-                    'icon' => 'error',
-                    'text' => lang("dont_enough_vote_points", "unstuck")
-                ];
+                die(json_encode($data));
+
             }
-            die(json_encode($data));
+            elseif($price_vote)
+            {
+                if ($this->user->getVp() >= $price_vote)
+                {
+
+                    $this->home($realmId, $characterGuid);
+                    $this->done($realmId, $characterName , $characterGuid);
+                    // Update Donation Points
+                    if ($price_vote > 0) {
+                        $this->user->setVp($this->user->getVp() - $price_vote);
+                    }
+
+                    //Successful
+                    $data = [
+                        'status' => true,
+                        'icon' => 'success',
+                        'text' => lang("successfully", "unstuck")
+                    ];
+
+                } else {
+                    $data = [
+                        'status' => false,
+                        'icon' => 'error',
+                        'text' => lang("dont_enough_vote_points", "unstuck")
+                    ];
+                }
+                die(json_encode($data));
+
+            }
+
+            elseif ($price_donate)
+            {
+                if ($this->user->getDp() >= $price_donate)
+                {
+
+                    $this->home($realmId, $characterGuid);
+                    $this->done($realmId, $characterName , $characterGuid);
+
+                    // Update Donation Points
+                    if ($price_donate > 0) {
+                        $this->user->setDp($this->user->getDp() - $price_donate);
+                    }
+                    //Successful
+                    $data = [
+                        'status' => true,
+                        'icon' => 'success',
+                        'text' => lang("successfully", "unstuck")
+                    ];
+
+                } else {
+                    $data = [
+                        'status' => false,
+                        'icon' => 'error',
+                        'text' => lang("dont_enough_donate_points", "unstuck")
+                    ];
+                }
+                die(json_encode($data));
+
+            }
+            elseif ($gold)
+            {
+                if($this->unstuck_model->getmoneyCharacter($realmId,$characterGuid))
+                {
+                    $data = [
+                        'status' => false,
+                        'icon' => 'error',
+                        'text' => lang("dont_enough_character_gold", "unstuck")
+                    ];
+                }
+                else
+                {
+                    //Successful
+                    $this->home($realmId, $characterGuid);
+                    $this->done($realmId, $characterName , $characterGuid);
+                    $this->unstuck_model->ChangeGoldCharacter ($realmId,$characterGuid,$characterName) ;
+
+                    $data = [
+                        'status' => true,
+                        'icon' => 'success',
+                        'text' => lang("successfully", "unstuck")
+                    ];
+                }
+
+                die(json_encode($data));
+            }
+
         } else {
             $data = [
                 'status' => false,
@@ -194,5 +280,21 @@ class Unstuck extends MX_Controller
         $this->gps['posY'] = $rows[0]['posY'];
         $this->gps['posZ'] = $rows[0]['posZ'];
     }
+
+    public function done($realmid, $characterName , $characterGuid)
+    {
+
+        $realmConnection = $this->realms->getRealm($realmid)->getCharacters();
+        $realmConnection->connect();
+
+
+        $this->realms->getRealm($realmid)->getEmulator()->sendCommand('.revive ' . $characterName);
+
+        $this->unstuck_model->setLocation($this->gps['posX'], $this->gps['posY'], $this->gps['posZ'], $this->gps['orientation'], $this->gps['mapId'], $characterGuid, $realmConnection->getConnection());
+
+        return true;
+    }
+
+
 
 }

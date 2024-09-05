@@ -2,12 +2,19 @@ const Unstuck = {
 
     User: {
         vp: null,
-        price: 0,
+        dp: null,
+        dp_price: 0,
+        vp_price: 0,
+        gold : 0 ,
         character: 0,
 
-        initialize: function (config) {
-            this.vp = config.vp;
-            this.price = config.price;
+        initialize: function (vp,vp_price ,dp ,dp_price , gold) {
+            this.vp = vp;
+            this.dp = dp;
+            this.dp_price = dp_price ;
+            this.vp_price = vp_price ;
+            this.gold = gold ;
+
         }
     },
 
@@ -31,18 +38,14 @@ const Unstuck = {
         this.User.realm = realmId;
     },
 
-    getPrice: function () {
-        return this.User.price;
-    },
-
     busy: false,
 
-    Submit: function (form) {
+    Submit: function () {
         if (Unstuck.busy)
             return;
 
         //Check if we have selected realm
-        if (this.User.realm == 0) {
+        if (this.User.realm === 0) {
             Swal.fire({
                 icon: 'error',
                 title: 'Unstuck',
@@ -52,7 +55,7 @@ const Unstuck = {
         }
 
         //Check if we have selected character
-        if (this.User.character == 0) {
+        if (this.User.character === 0) {
             Swal.fire({
                 icon: 'error',
                 title: 'Unstuck',
@@ -61,22 +64,8 @@ const Unstuck = {
             return;
         }
 
-        var CanAfford = false;
-
-        if (this.getPrice() == 0) {
-            CanAfford = true;
-        } else {
-            if (Unstuck.User.vp < this.getPrice()) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Unstuck',
-                    text: lang("cant_afford", "unstuck"),
-                })
-            } else {
-                CanAfford = true;
-            }
-        }
-
+        var CanAfford = true;
+   
         if (CanAfford) {
             // Make the user confirm the purchase
             Swal.fire({
